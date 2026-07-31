@@ -4,6 +4,8 @@ import random
 from sudoku_solver import fill_board
 from sudoku_validation import EMPTY, SIZE, is_safe
 
+MAX_GENERATION_ATTEMPTS = 10
+
 
 def deep_copy(board):
     return copy.deepcopy(board)
@@ -46,11 +48,14 @@ def count_solutions(board):
 
 def remove_cells(board, clues):
     """Remove clues while keeping the puzzle uniquely solvable."""
-    cells = [(row, col) for row in range(SIZE) for col in range(SIZE)]
-    random.shuffle(cells)
+    if not 1 <= clues <= SIZE * SIZE:
+        raise ValueError('clues must be between 1 and 81')
 
     while sum(1 for row in board for cell in row if cell != EMPTY) > clues:
+        cells = [(row, col) for row in range(SIZE) for col in range(SIZE)]
+        random.shuffle(cells)
         removed_any = False
+
         for row, col in cells:
             if sum(1 for r in board for cell in r if cell != EMPTY) <= clues:
                 break
@@ -69,9 +74,23 @@ def remove_cells(board, clues):
 
 
 def generate_puzzle(clues=35):
-    board = create_empty_board()
-    fill_board(board)
-    solution = deep_copy(board)
-    remove_cells(board, clues)
-    puzzle = deep_copy(board)
-    return puzzle, solution
+    if not 1 <= clues <= SIZE * SIZE:
+        raise ValueError('clues must be between 1 and 81')
+
+    for attempt in range(1, MAX_GENERATION_ATTEMPTS + 1):
+        board = create_empty_board()
+        fill_board(board)
+        solution = deep_copy(board)
+        remove_cells(board, clues)
+        puzzle = deep_copy(board)
+
+        if sum(1 for row in puzzle for cell in row if cell != EMPTY) != clues:
+            continue
+
+        if count_solutions(puzzle) == 1:
+            return puzzle, solution
+
+    raise RuntimeError(
+        f'Unable to generate a uniquely solvable Sudoku puzzle with {clues} clues after '
+        f'{MAX_GENERATION_ATTEMPTS} attempts.'
+    )

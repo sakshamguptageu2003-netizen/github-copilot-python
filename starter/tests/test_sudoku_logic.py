@@ -1,5 +1,6 @@
 import pytest
 import sudoku_logic
+import sudoku_solver
 
 
 class TestBoardCreation:
@@ -133,3 +134,60 @@ class TestPuzzleGeneration:
             puzzle, solution = sudoku_logic.generate_puzzle(clues=clues)
             clue_count = sum(1 for row in puzzle for cell in row if cell != sudoku_logic.EMPTY)
             assert clue_count == clues
+
+
+def is_valid_complete_board(board):
+    """Return True when board contains every digit 1-9 in each row, column, and box."""
+    digits = set(range(1, 10))
+
+    for row in board:
+        assert set(row) == digits
+
+    for col in range(9):
+        assert set(board[row][col] for row in range(9)) == digits
+
+    for box_row in range(0, 9, 3):
+        for box_col in range(0, 9, 3):
+            box = {
+                board[r][c]
+                for r in range(box_row, box_row + 3)
+                for c in range(box_col, box_col + 3)
+            }
+            assert box == digits
+
+
+class TestSolverAndUniqueness:
+    """Tests that generated puzzles are solvable and uniquely determined."""
+
+    def test_is_safe_rejects_invalid_numbers(self):
+        """Test that is_safe rejects values outside the valid Sudoku range."""
+        board = sudoku_logic.create_empty_board()
+
+        assert sudoku_logic.is_safe(board, 0, 0, 0) is False
+        assert sudoku_logic.is_safe(board, 0, 0, 10) is False
+
+    def test_generate_puzzle_solution_is_valid(self):
+        """Test that generated solution is a complete valid Sudoku board."""
+        _, solution = sudoku_logic.generate_puzzle()
+
+        is_valid_complete_board(solution)
+
+    def test_generate_puzzle_is_uniquely_solvable(self):
+        """Test that generated puzzle has exactly one solution."""
+        puzzle, _ = sudoku_logic.generate_puzzle()
+
+        assert sudoku_logic.count_solutions(puzzle) == 1
+
+    def test_generate_puzzle_with_all_clues_returns_full_board(self):
+        """Test that requesting 81 clues returns a completed puzzle."""
+        puzzle, solution = sudoku_logic.generate_puzzle(clues=81)
+
+        assert puzzle == solution
+
+    def test_solver_can_solve_generated_puzzle(self):
+        """Test that the solver can complete the generated puzzle."""
+        puzzle, solution = sudoku_logic.generate_puzzle()
+        board_copy = sudoku_logic.deep_copy(puzzle)
+
+        assert sudoku_solver.fill_board(board_copy) is True
+        assert board_copy == solution

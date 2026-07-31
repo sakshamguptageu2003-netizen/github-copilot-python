@@ -73,15 +73,32 @@ function renderLeaderboard() {
   }).join('');
 }
 
+function isDuplicateLeaderboardEntry(entries, newEntry) {
+  return entries.some(entry =>
+    entry.playerName === newEntry.playerName &&
+    entry.timeSeconds === newEntry.timeSeconds &&
+    entry.difficulty === newEntry.difficulty &&
+    entry.hintsUsed === newEntry.hintsUsed
+  );
+}
+
 function addLeaderboardEntry(playerName, timeSeconds, difficulty, hintsUsed) {
-  const entries = loadLeaderboard();
-  entries.push({
-    playerName: playerName.trim() || 'Anonymous',
+  const normalizedName = playerName.trim() || 'Anonymous';
+  const newEntry = {
+    playerName: normalizedName,
     timeSeconds,
     difficulty,
     hintsUsed
-  });
-  const sorted = entries.sort((a, b) => {
+  };
+
+  const entries = loadLeaderboard();
+  if (isDuplicateLeaderboardEntry(entries, newEntry)) {
+    renderLeaderboard();
+    return false;
+  }
+
+  entries.push(newEntry);
+  const sorted = entries.slice().sort((a, b) => {
     if (a.timeSeconds !== b.timeSeconds) {
       return a.timeSeconds - b.timeSeconds;
     }
@@ -89,6 +106,7 @@ function addLeaderboardEntry(playerName, timeSeconds, difficulty, hintsUsed) {
   }).slice(0, 10);
   saveLeaderboard(sorted);
   renderLeaderboard();
+  return true;
 }
 
 function getPreferredTheme() {
@@ -117,6 +135,12 @@ function toggleTheme() {
 
 function getCellIndex(row, col) {
   return row * SIZE + col;
+}
+
+function getCellBlockClass(row, col) {
+  const blockRow = Math.floor(row / 3);
+  const blockCol = Math.floor(col / 3);
+  return (blockRow + blockCol) % 2 === 0 ? 'block-light' : 'block-dark';
 }
 
 function getConflictingCells(board) {
@@ -173,7 +197,9 @@ function refreshConflictHighlights() {
 
   for (let idx = 0; idx < inputs.length; idx += 1) {
     const input = inputs[idx];
-    const classes = ['sudoku-cell'];
+    const row = Math.floor(idx / SIZE);
+    const col = idx % SIZE;
+    const classes = ['sudoku-cell', getCellBlockClass(row, col)];
 
     if (input.classList.contains('prefilled')) {
       classes.push('prefilled');
@@ -203,9 +229,9 @@ function createBoardElement() {
       const input = document.createElement('input');
       input.type = 'text';
       input.maxLength = 1;
-      input.className = 'sudoku-cell';
       input.dataset.row = i;
       input.dataset.col = j;
+      input.className = `sudoku-cell ${getCellBlockClass(i, j)}`;
       input.addEventListener('input', (e) => {
         const val = e.target.value.replace(/[^1-9]/g, '');
         e.target.value = val;
@@ -243,7 +269,7 @@ function applyHint(row, col, value) {
   const input = boardDiv.getElementsByTagName('input')[idx];
   input.value = value;
   input.disabled = true;
-  input.className = 'sudoku-cell hinted';
+  input.className = `sudoku-cell ${getCellBlockClass(row, col)} hinted`;
   puzzle[row][col] = value;
   refreshConflictHighlights();
 }
@@ -260,14 +286,15 @@ function renderPuzzle(puz) {
       const idx = i * SIZE + j;
       const val = puzzle[i][j];
       const inp = inputs[idx];
+      const blockClass = getCellBlockClass(i, j);
       if (val !== 0) {
         inp.value = val;
         inp.disabled = true;
-        inp.className = 'sudoku-cell prefilled';
+        inp.className = `sudoku-cell ${blockClass} prefilled`;
       } else {
         inp.value = '';
         inp.disabled = false;
-        inp.className = 'sudoku-cell';
+        inp.className = `sudoku-cell ${blockClass}`;
       }
     }
   }
@@ -324,9 +351,11 @@ async function checkSolution() {
   for (let idx = 0; idx < inputs.length; idx++) {
     const inp = inputs[idx];
     if (inp.disabled) continue;
-    inp.className = 'sudoku-cell';
+    const row = Math.floor(idx / SIZE);
+    const col = idx % SIZE;
+    inp.className = `sudoku-cell ${getCellBlockClass(row, col)}`;
     if (incorrect.has(idx)) {
-      inp.className = 'sudoku-cell incorrect';
+      inp.className = `sudoku-cell ${getCellBlockClass(row, col)} incorrect`;
     }
   }
   refreshConflictHighlights();
@@ -351,11 +380,16 @@ function saveScore() {
 
   const nameInput = document.getElementById('player-name');
   const playerName = nameInput ? nameInput.value : '';
-  addLeaderboardEntry(playerName, elapsedSeconds, currentDifficulty, hintsUsed);
+  const saved = addLeaderboardEntry(playerName, elapsedSeconds, currentDifficulty, hintsUsed);
 
   const msg = document.getElementById('message');
-  msg.style.color = '#388e3c';
-  msg.innerText = 'Score saved to the leaderboard.';
+  if (saved) {
+    msg.style.color = '#388e3c';
+    msg.innerText = 'Score saved to the leaderboard.';
+  } else {
+    msg.style.color = '#1976d2';
+    msg.innerText = 'This score is already on the leaderboard.';
+  }
 }
 
 // Wire buttons
