@@ -260,24 +260,8 @@ select,
     margin: 6px 0;
 }
 
-.block-light{
-    background:#f3f3f3;
-}
-
-.block-dark{
-    background:#ece6ff;
-}
-.prefilled{
-    font-weight:bold;
-}
-
-.incorrect{
-    background:#ffcdd2 !important;
-}
-
-.hinted{
-    background:#fff8c5 !important;
-}
+/* Use the `.sudoku-cell.block-light` and `.sudoku-cell.block-dark` rules above
+   which reference CSS variables to ensure correct colors in light/dark themes. */
 
 @media (max-width: 860px) {
     .game-layout {
