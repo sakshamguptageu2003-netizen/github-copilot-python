@@ -245,6 +245,32 @@ select,
     margin: 6px 0;
 }
 
+.block-light{
+    background:#f3f3f3;
+}
+
+.block-dark{
+    background:#ece6ff;
+}
+body[data-theme='dark'] .block-light{
+    background:#323844;
+}
+
+body[data-theme='dark'] .block-dark{
+    background:#46405f;
+}
+.prefilled{
+    font-weight:bold;
+}
+
+.incorrect{
+    background:#ffcdd2 !important;
+}
+
+.hinted{
+    background:#fff8c5 !important;
+}
+
 @media (max-width: 860px) {
     .game-layout {
         grid-template-columns: 1fr;
